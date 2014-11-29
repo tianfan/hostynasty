@@ -8,6 +8,7 @@ var InspectionSchema = new Schema({
     hazard_rating: String,
     num_critical: Number,
     num_non_critical: Number,
+    comments: String,
     violations: [{code: String, Description: String, Comments: String}]
 });
 
