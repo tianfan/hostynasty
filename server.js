@@ -11,7 +11,10 @@ mongoose.connect('mongodb://tianfan:g00dn3ss@ds049130.mongolab.com:49130/first_m
 //mongoose.connect('mongodb://localhost:27017/nastydb_dev');
 
 var Bear       = require('./app/models/bear')
-var Restaurant       = require('./app/models/restaurant')
+var City       = require('./app/models/city')
+var Inspection       = require('./app/models/inspection')
+var Restaurant = require('./app/models/restaurant')
+
 
 app.use(bodyParser.urlencoded( { extended: true } ));
 app.use(bodyParser.json());
@@ -141,46 +144,74 @@ app.get('/scrape', function(req, res){
             var $ = cheerio.load(html);
             
             $( "a[target='body']" ).each(function( index ) {
-                  console.log( index + ": " + $( this ).text() );
-                  console.log( index + " ++++++++++++url: " + base_url + $( this ).attr("href") );
+                  
+                  var curr_city = new City();
+                  curr_city.name = $(this).text();
+                  curr_city.url = base_url + $(this).attr("href").replace("Count=30", "Count=2000");
+                  curr_city.province = "BC";
+                  curr_city.health_auth = "VIHA";
+                  
+                  console.log( index + ": " + curr_city.name );
+                  console.log( index + " ++++++++++++url: " + curr_city.url );
 
                   //going into each city
-                  request(base_url+$(this).attr("href"), function(error, response, html){
+                  request(curr_city.url, function(error, response, html){
                       if(!error){
                           var $ = cheerio.load(html);
-                          $("td a").each(function(index){
-                          
-                              console.log("restaurant url:" + root_url + $(this).attr("href")); 
+                          $("tr").slice(1).each(function(index){
 
-                              var restaurant_url = root_url + $(this).attr("href");
+                              var curr_restaurant = new Restaurant(); 
+
+                              curr_restaurant.name = $(this).children().first().find("a").text(); 
+                              curr_restaurant.url = root_url + $(this).children().first().find("a").attr("href");
+                              curr_restaurant.location = $(this).children().eq(2).text()
+                              curr_restaurant.city = curr_city;
+                          
+                              console.log("restaurant name:" + curr_restaurant.name); 
+                              console.log("restaurant city:" + curr_restaurant.city.name); 
+                              console.log("restaurant url:" + curr_restaurant.url); 
+                              //console.log("restaurant location:" + curr_restaurant.location); 
 
                               //going into each restaurant here
-                              request(restaurant_url, function(error, response, html){
+                              request(curr_restaurant.url, function(error, response, html){
                               
                                   if(!error){
                                   
                                       var $ = cheerio.load(html);
 
-                                      var inspection_url = root_url + $("td a").attr("href");
-                                      var restaurant_name = $("body h2").text();
-                                      var restaurant_location = $("body h2").next().children("br").get(0).nextSibling;
+                                      var foodsafe = $("body p").eq(1).find("tr").eq(3).find("td").eq(1).text(); 
+                                      //console.log("## foodsafe rating: " + foodsafe );
+                                      curr_restaurant.foodsafe = foodsafe == "NO" ? false : true;
                                       
-                                      console.log("##" + restaurant_location );
-                                      //console.log("##" + restaurant_name + " Inspections: " + inspection_url);
-                                      //going into each inspection
+                                      $("body p").eq(3).find("tr").slice(1).each(function(index){
 
-                                      request(inspection_url, function(error, response, html){
-                                      
-                                          if(!error){
-                                          
-                                              var $ = cheerio.load(html);
+                                          var curr_inspect = new Inspection();
+                                          curr_inspect.type = $(this).find("td").eq(0).find("a").text();
+                                          curr_inspect.date = new Date($(this).find("td").eq(1).text().trim());
+                                          curr_inspect.url = root_url + $(this).find("td").eq(0).find("a").attr("href");
+                                          //console.log("#### curr inspect: " + curr_inspect);
 
-                                              //var
-                                          
-                                          }
-                                      
+                                          //going into each inspection
+                                          request(curr_inspect.url, function(error, response, html){
+                                              console.log("#### curr inspect: " + curr_inspect);
+
+                                              if(!error){
+
+                                                  var $ = cheerio.load(html);
+
+                                                  curr_inspect.hazard_rating = $(this).find("font").attr('color', '#006600');
+                                                  curr_inspect.num_critical = $("body p").eq(0).find("tr").eq(3).find("td").eq(1).text()
+                                                  curr_inspect.num_non_critical = $("body p").eq(0).find("tr").eq(4).find("td").eq(1).text()
+
+
+                                                  //var
+
+                                              }
+
+                                          });
+                                           
                                       });
-                                  
+                                     
                                   }
                               
                               });
