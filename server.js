@@ -60,6 +60,7 @@ app.get('/scrape', function(req, res) {
             res.send(html);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
                             curr_restaurant.save(function(err){
                                 if(err)
                                 console.log("######################save faild");
@@ -72,6 +73,11 @@ app.get('/scrape', function(req, res) {
                             console.log("restaurant url:" + curr_restaurant.url);
                             */
                             //console.log("restaurant location:" + curr_restaurant.location); 
+=======
+        }
+    })
+})
+>>>>>>> FETCH_HEAD
 =======
         }
     })
@@ -143,6 +149,7 @@ function scrapeRestaurant(curr_restaurant){
 	    $("body p").eq(3).find("tr").slice(1).each(function(index) {
 
 <<<<<<< HEAD
+<<<<<<< HEAD
                                                 curr_restaurant.inspections.push(curr_inspect);
                                                 
                                                 curr_restaurant.save(function(err){
@@ -179,6 +186,30 @@ function scrapeRestaurant(curr_restaurant){
 	    });
 */
 
+=======
+		var curr_inspect = new Inspection();
+		curr_inspect.type = $(this).find("td").eq(0).find("a").text();
+		curr_inspect.date = new Date($(this).find("td").eq(1).text().trim());
+		curr_inspect.url = root_url + $(this).find("td").eq(0).find("a").attr("href");
+		curr_inspect.violations = [];
+		//console.log("#### curr inspect: " + curr_inspect);
+
+		//going into each inspection
+		limitConcurrent(scrapeInspection,[curr_inspect,curr_restaurant]);
+
+	    });
+
+	    /*
+	    curr_restaurant.save(function(err){
+		if(err){
+		    console.log('################%%%%%%%%%save failed%%%%%%%%%################');
+		} else {
+		    console.log("save successful : " + curr_restaurant);
+		}
+	    });
+*/
+
+>>>>>>> FETCH_HEAD
 	}
 	
     });
@@ -194,6 +225,7 @@ function scrapeInspection(curr_inspect,curr_restaurant){
 		var $ = cheerio.load(html);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
                                     curr_restaurant.save(function(err){
                                         if(err){
                                             console.log('################%%%%%%%%%save failed%%%%%%%%%################');
@@ -202,10 +234,15 @@ function scrapeInspection(curr_inspect,curr_restaurant){
                                         }
                                     });
 =======
+=======
+>>>>>>> FETCH_HEAD
 		curr_inspect.hazard_rating = $(this).find("font").attr('color', '#006600');
 		curr_inspect.num_critical = parseInt($("body p").eq(0).find("tr").eq(3).find("td").eq(1).text());
 		curr_inspect.num_non_critical = parseInt($("body p").eq(0).find("tr").eq(4).find("td").eq(1).text());
 		curr_inspect.comments = $("body p").eq(3).text();
+<<<<<<< HEAD
+>>>>>>> FETCH_HEAD
+=======
 >>>>>>> FETCH_HEAD
 
 		console.log("inspection: " + curr_inspect.num_critical+" at "+curr_restaurant.name)
