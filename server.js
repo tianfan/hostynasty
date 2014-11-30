@@ -156,6 +156,15 @@ function scrapeRestaurant(curr_restaurant){
 
 function scrapeInspection(curr_inspect,curr_restaurant){
 	concurrent--;
+	
+    curr_restaurant.save(function(err){
+	    if(err){
+	        console.log('################%%%%%%%%%save failed%%%%%%%%%################');
+	    } else {
+	        console.log("save successful : " + curr_restaurant);
+	    }
+	});
+
 	request(curr_inspect.url, function(error, response, html) {
 		concurrent++;
 	    
@@ -180,11 +189,16 @@ function scrapeInspection(curr_inspect,curr_restaurant){
 
 		});
 
-		//~ curr_restaurant.inspections.push(curr_inspect);
+		curr_restaurant.inspections.push(curr_inspect);
 
 		//~ console.log("finished restaurant: " + curr_restaurant);
-
-
+        curr_restaurant.save(function(err){
+	        if(err){
+	            console.log('################%%%%%%%%%save failed%%%%%%%%%################');
+	        } else {
+	            console.log("save successful : " + curr_restaurant);
+	        }
+	    });
 		//var
 
 	    }
