@@ -15,6 +15,10 @@ var Inspection = require('./app/models/inspection')
 var Violation = require('./app/models/violation')
 var Restaurant = require('./app/models/restaurant')
 
+var Limit = 25;
+var Offset = 0;
+var Nexturl = "";
+
 
 app.use(bodyParser.urlencoded({
     extended: true
@@ -23,11 +27,103 @@ app.use(bodyParser.json());
 
 var port = process.env.PORT || 9999;
 
+var router = express.Router();
+
+router.use(function(req, res, next){
+
+        console.log('Something is happening.');
+            next();
+
+});
+
+router.get('/', function(req, res) {
+        
+        res.json({ message: 'yeah bro, we are on the way.'});
+
+});
+
+
+
+router.route('/restaurants')
+    .post(function(req, res){
+
+        var restaurant = new Restaurant();
+        restaurant.name = req.body.name;
+        restaurant.location.streetAddress = req.body.location;
+        restaurant.city = {name: req.body.city, url: req.body.city_url};
+        restaurant.health_auth = req.body.health_auth;
+
+        restaurant.save(function(err){
+            if (err) {
+                res.send(err);
+            }
+
+            res.json({message: 'restaurant created!'});
+
+        });
+
+    })
+
+
+    .get(function(req, res){
+
+       var query_for_count = Restaurant.find();
+       var query = Restaurant.find().skip(req.query.offset).limit(req.query.limit);
+       if(req.query.city != null) {
+           query = query.where('city.name').equals(req.query.city);
+           query_for_count = query_for_count.where('city.name').equals(req.query.city);
+       }
+       if(req.query.name != null) {
+           query = query.where('name').equals('/^' + req.query.name + '$/i');
+           query_for_count = query_for_count.where('name').equals(req.query.name);
+       }
+       if(req.query.foodsafe != null) {
+           if(req.query.foodsafe == 'true'){
+               query = query.where('foodsafe').equals(true);
+               query_for_count = query_for_count.where('foodsafe').equals(true);
+           }
+       }
+       
+       /*if(res.get.latidude && res.get.longitude) {
+
+           query = query.where('latitude').gt(res.get.).lt(66)
+
+       }*/
+
+       query.exec(function(err, restaurants) {
+       
+           if(err)
+               res.send(err);
+           
+           query_for_count.count(function(err, count) {
+               
+               res.json({'meta': {'total': count, 'limit': req.query.limit, 'offset': req.query.offset}, Results:restaurants});
+           });
+
+       });
+
+/*
+       Restaurant.find({ skip: 0, limit: 5 }, function(err, restaurants){
+
+           if(err)
+               res.send(err);
+
+           res.json(restaurants);
+
+       });
+*/
+    });
+
+
+
+
+
+
 
 /*
  * web scraper start from here
  * */
-app.get('/scrape', function(req, res) {
+router.route('/scrape').get(function(req, res) {
 
     url = 'http://healthspace.ca/Clients/VIHA/VIHA_Website.nsf/Food-CityList?OpenView&Count=1000';
     base_url = 'http://healthspace.ca/Clients/VIHA/VIHA_Website.nsf/';
@@ -89,9 +185,11 @@ function scrapeCity(curr_city){
 
 		    var curr_restaurant = new Restaurant();
 
-		    curr_restaurant.name = $(this).children().first().find("a").text();
-		    curr_restaurant.url = root_url + $(this).children().first().find("a").attr("href");
-		    curr_restaurant.location = $(this).children().eq(2).text()
+		    curr_restaurant.name = $(this).children().first().find("a").text().trim();
+		    curr_restaurant.url = root_url + $(this).children().first().find("a").attr("href").trim();
+		    curr_restaurant.location.streetAddress = $(this).children().eq(2).text().trim();
+		    curr_restaurant.location.latitude = null;
+		    curr_restaurant.location.longitude = null;
 		    curr_restaurant.city = curr_city;
 		    curr_restaurant.inspections = [];
 
@@ -121,16 +219,16 @@ function scrapeRestaurant(curr_restaurant){
 	    
 	    var $ = cheerio.load(html);
 
-	    var foodsafe = $("body p").eq(1).find("tr").eq(3).find("td").eq(1).text();
+	    var foodsafe = $("body p").eq(1).find("tr").eq(3).find("td").eq(1).text().trim();
 	    //console.log("## foodsafe rating: " + foodsafe );
-	    curr_restaurant.foodsafe = foodsafe == "NO" ? false : true;
+	    curr_restaurant.foodsafe = foodsafe == "No" ? false : true;
 
 	    $("body p").eq(3).find("tr").slice(1).each(function(index) {
 
 		var curr_inspect = new Inspection();
-		curr_inspect.type = $(this).find("td").eq(0).find("a").text();
+		curr_inspect.type = $(this).find("td").eq(0).find("a").text().trim();
 		curr_inspect.date = new Date($(this).find("td").eq(1).text().trim());
-		curr_inspect.url = root_url + $(this).find("td").eq(0).find("a").attr("href");
+		curr_inspect.url = root_url + $(this).find("td").eq(0).find("a").attr("href").trim();
 		curr_inspect.violations = [];
 		//console.log("#### curr inspect: " + curr_inspect);
 
@@ -206,7 +304,7 @@ function scrapeInspection(curr_inspect,curr_restaurant){
 	});
 }
 
-//app.use('/api', router);
+app.use('/api', router);
 
 app.listen(port);
 console.log('Magic happens on port ' + port);
