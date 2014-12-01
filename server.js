@@ -67,6 +67,7 @@ router.route('/restaurants')
 
     .get(function(req, res){
 
+       if( req.query.offset != null && req.query.limit != null) {
        var query_for_count = Restaurant.find();
        var query = Restaurant.find().skip(req.query.offset).limit(req.query.limit);
        if(req.query.city != null) {
@@ -83,6 +84,7 @@ router.route('/restaurants')
                query_for_count = query_for_count.where('foodsafe').equals(true);
            }
        }
+       
        
        /*if(res.get.latidude && res.get.longitude) {
 
@@ -101,7 +103,10 @@ router.route('/restaurants')
            });
 
        });
-
+       }
+       else{
+            res.json({'error': 'must provide "limit" and "offset" in GET'});
+       }
 /*
        Restaurant.find({ skip: 0, limit: 5 }, function(err, restaurants){
 
