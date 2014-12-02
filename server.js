@@ -19,6 +19,17 @@ var Limit = 25;
 var Offset = 0;
 var Nexturl = "";
 
+var geocoderProvider = 'mapquest';
+var httpAdapter = 'http';
+
+// optionnal
+var extra = {
+    apiKey: 'Fmjtd%7Cluurn162l9%2C20%3Do5-9wts9u', // for Mapquest, OpenCage, Google Premier
+    formatter: null         // 'gpx', 'string', ...
+};
+
+var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter, extra);
+
 
 app.use(bodyParser.urlencoded({
     extended: true
@@ -198,6 +209,14 @@ function scrapeCity(curr_city){
 		    curr_restaurant.city = curr_city;
 		    curr_restaurant.inspections = [];
 
+            // Using callback
+            /*
+            geocoder.geocode(curr_restaurant.location.streetAddress + ', ' + curr_restaurant.city + ', BC, Canada', function(err, res) {
+                console.log(res);
+                //curr_restaurant.location.latitude = res[0].latitude;
+                //curr_restaurant.location.longitude = res[0].longitude;
+            });        
+            */
 		    //~ console.log("restaurant name:" + curr_restaurant.name);
 		    //~ console.log("restaurant city:" + curr_restaurant.city.name);
 		    //~ console.log("restaurant url:" + curr_restaurant.url);
@@ -264,7 +283,7 @@ function scrapeInspection(curr_inspect,curr_restaurant){
 	    if(err){
 	        console.log('################%%%%%%%%%save failed%%%%%%%%%################');
 	    } else {
-	        console.log("save successful : " + curr_restaurant);
+	        console.log("save successful for " + curr_restaurant.name);
 	    }
 	});
 
@@ -299,7 +318,7 @@ function scrapeInspection(curr_inspect,curr_restaurant){
 	        if(err){
 	            console.log('################%%%%%%%%%save failed%%%%%%%%%################');
 	        } else {
-	            console.log("save successful : " + curr_restaurant);
+	            console.log("save successful again for: " + curr_restaurant.name);
 	        }
 	    });
 		//var
