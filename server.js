@@ -15,6 +15,8 @@ var Inspection = require('./app/models/inspection')
 var Violation = require('./app/models/violation')
 var Restaurant = require('./app/models/restaurant')
 
+var restaurant_for_save = new Restaurant();
+
 var Limit = 25;
 var Offset = 0;
 var Nexturl = "";
@@ -243,6 +245,7 @@ function scrapeRestaurant(curr_restaurant){
 	    
 	    var $ = cheerio.load(html);
 
+	    var facility_num = $("body p").eq(1).find("tr").eq(0).find("td").eq(1).text().trim();
 	    var foodsafe = $("body p").eq(1).find("tr").eq(3).find("td").eq(1).text().trim();
 	    //console.log("## foodsafe rating: " + foodsafe );
 	    curr_restaurant.foodsafe = foodsafe == "No" ? false : true;
@@ -278,7 +281,15 @@ function scrapeRestaurant(curr_restaurant){
 
 function scrapeInspection(curr_inspect,curr_restaurant){
 	concurrent--;
-	
+    
+    Restaurant.findOne({'facility_num': curr_restaurant.facility_num}, function(err, restaurant){
+    
+        //if (err) return handleError(err);
+        
+    
+    });
+
+
     curr_restaurant.save(function(err){
 	    if(err){
 	        console.log('################%%%%%%%%%save failed%%%%%%%%%################');
