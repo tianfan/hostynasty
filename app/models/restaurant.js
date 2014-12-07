@@ -8,7 +8,7 @@ var RestaurantSchema = new Schema({
     number: String,
     type: String,
     months_open: String,
-    facility_num: String
+    facility_num: String,
     foodsafe: Boolean,
     health_auth: String,
     url: String,

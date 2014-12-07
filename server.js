@@ -21,17 +21,19 @@ var Limit = 25;
 var Offset = 0;
 var Nexturl = "";
 
-var geocoderProvider = 'mapquest';
-var httpAdapter = 'http';
+/*
+var geocoderProvider = 'google';
+var httpAdapter = 'https';
 
 // optionnal
 var extra = {
-    apiKey: 'Fmjtd%7Cluurn162l9%2C20%3Do5-9wts9u', // for Mapquest, OpenCage, Google Premier
+    apiKey: '', // for Mapquest, OpenCage, Google Premier
     formatter: null         // 'gpx', 'string', ...
 };
 
-var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter, extra);
 
+var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter, extra);
+*/
 
 app.use(bodyParser.urlencoded({
     extended: true
@@ -210,10 +212,21 @@ function scrapeCity(curr_city){
 		    curr_restaurant.location.longitude = null;
 		    curr_restaurant.city = curr_city;
 		    curr_restaurant.inspections = [];
+            /* 
+            geocoder_url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + curr_restaurant.location.streetAddress + ', ' + curr_restaurant.city + ', BC, Canada';
 
-            // Using callback
+            request(geocoder_url, function(err, res){
+            
+                console.log(res);
+            
+            });
+            */
             /*
+            // Using callback
             geocoder.geocode(curr_restaurant.location.streetAddress + ', ' + curr_restaurant.city + ', BC, Canada', function(err, res) {
+                if(err) {
+                    throw err;
+                }
                 console.log(res);
                 //curr_restaurant.location.latitude = res[0].latitude;
                 //curr_restaurant.location.longitude = res[0].longitude;
