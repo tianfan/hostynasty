@@ -5,7 +5,6 @@ var mongoose = require('mongoose');
 
 var request = require('request');
 var cheerio = require('cheerio');
-var wait = require('wait.for');
 
 mongoose.connect('mongodb://tianfan:g00dn3ss@ds049130.mongolab.com:49130/first_mongodb');
 
