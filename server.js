@@ -5,6 +5,7 @@ var mongoose = require('mongoose');
 
 var request = require('request');
 var cheerio = require('cheerio');
+var wait = require('wait.for');
 
 mongoose.connect('mongodb://tianfan:g00dn3ss@ds049130.mongolab.com:49130/first_mongodb');
 
@@ -21,19 +22,17 @@ var Limit = 25;
 var Offset = 0;
 var Nexturl = "";
 
-/*
 var geocoderProvider = 'google';
 var httpAdapter = 'https';
 
 // optionnal
 var extra = {
-    apiKey: '', // for Mapquest, OpenCage, Google Premier
+    apiKey: 'AIzaSyCFEBBo8XMieQj8Brkq7V5TWxK3bBBEe2I', // for Mapquest, OpenCage, Google Premier
     formatter: null         // 'gpx', 'string', ...
 };
 
-
 var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter, extra);
-*/
+
 
 app.use(bodyParser.urlencoded({
     extended: true
@@ -52,9 +51,7 @@ router.use(function(req, res, next){
 });
 
 router.get('/', function(req, res) {
-        
         res.json({ message: 'yeah bro, we are on the way.'});
-
 });
 
 
@@ -195,6 +192,40 @@ function limitConcurrent(thing,args){
 	},checkInterval);
 }
 
+function geocodeAddress(address, restaurant) {
+    var google_geocoder_url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+ address +'&sensor=false&key=AIzaSyCLIp24M6QY44gdMilcfdt866EhIodnOpo';
+
+    request(google_geocoder_url, function(error, response, html){
+    
+        console.log('geocoding url: ' + google_geocoder_url);
+        var temp_json = JSON.parse(html);
+
+        //if(temp_json.status == "ZERO_RESULTS")
+        if (temp_json.status == "OK") {
+            return_lat = temp_json.results[0].geometry.location.lat;
+            return_lng = temp_json.results[0].geometry.location.lng;
+            console.log("google lat: " + return_lat);
+            //return [parseFloat(return_lat), parseFloat(return_lng)];
+
+            console.log("address geocoded coordinate: " + return_lat + "  " + return_lng);
+            restaurant.location.latitude = parseFloat(return_lat);
+            restaurant.location.longitude = parseFloat(return_lng);
+            restaurant.save(function(err){
+	            if(err){
+	                console.log('################%%%%%%%%%save failed after geocode%%%%%%%%%################');
+	            } else {
+	                console.log("save successful after geocoding " + return_lat + " " + return_lng);
+	            }
+	        });
+
+        }
+
+        
+    });
+
+}
+
+
 function scrapeCity(curr_city){
 	concurrent--;
 	request(curr_city.url, function(error, response, html) {
@@ -212,35 +243,9 @@ function scrapeCity(curr_city){
 		    curr_restaurant.location.longitude = null;
 		    curr_restaurant.city = curr_city;
 		    curr_restaurant.inspections = [];
-            /* 
-            geocoder_url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + curr_restaurant.location.streetAddress + ', ' + curr_restaurant.city + ', BC, Canada';
-
-            request(geocoder_url, function(err, res){
-            
-                console.log(res);
-            
-            });
-            */
-            /*
-            // Using callback
-            geocoder.geocode(curr_restaurant.location.streetAddress + ', ' + curr_restaurant.city + ', BC, Canada', function(err, res) {
-                if(err) {
-                    throw err;
-                }
-                console.log(res);
-                //curr_restaurant.location.latitude = res[0].latitude;
-                //curr_restaurant.location.longitude = res[0].longitude;
-            });        
-            */
-		    //~ console.log("restaurant name:" + curr_restaurant.name);
-		    //~ console.log("restaurant city:" + curr_restaurant.city.name);
-		    //~ console.log("restaurant url:" + curr_restaurant.url);
-		    //console.log("restaurant location:" + curr_restaurant.location); 
 
 		    //going into each restaurant here
 			limitConcurrent(scrapeRestaurant,[curr_restaurant]);
-
-
 
 		});
 
@@ -259,33 +264,46 @@ function scrapeRestaurant(curr_restaurant){
 	    var $ = cheerio.load(html);
 
 	    var facility_num = $("body p").eq(1).find("tr").eq(0).find("td").eq(1).text().trim();
-	    var foodsafe = $("body p").eq(1).find("tr").eq(3).find("td").eq(1).text().trim();
-	    //console.log("## foodsafe rating: " + foodsafe );
-	    curr_restaurant.foodsafe = foodsafe == "No" ? false : true;
 
-	    $("body p").eq(3).find("tr").slice(1).each(function(index) {
+        console.log("facility Num: " + facility_num);
+        Restaurant.findOne({'facility_num': facility_num}, function(err, restaurant){
+    
+            if (err) return handleError(err);
+           
+            if (restaurant != null) {
+                console.log("has existing restaurant, replacing it with the one in db, ##################:" + restaurant.name);
+                curr_restaurant = restaurant;
+            } else {
+                curr_restaurant.facility_num = facility_num;
+            }
+            
+            if(curr_restaurant.location.latitude == 0 || curr_restaurant.location.latitude == null) {
+                var temp_add = curr_restaurant.location.streetAddress + ', ' + curr_restaurant.city.name + ', BC, Canada';
+                console.log("address: " + temp_add);
 
-		var curr_inspect = new Inspection();
-		curr_inspect.type = $(this).find("td").eq(0).find("a").text().trim();
-		curr_inspect.date = new Date($(this).find("td").eq(1).text().trim());
-		curr_inspect.url = root_url + $(this).find("td").eq(0).find("a").attr("href").trim();
-		curr_inspect.violations = [];
-		//console.log("#### curr inspect: " + curr_inspect);
+                geocodeAddress(temp_add, curr_restaurant);
+            }
+            
+            curr_restaurant.facility_num = facility_num;
+	        var foodsafe = $("body p").eq(1).find("tr").eq(3).find("td").eq(1).text().trim();
+	        //console.log("## foodsafe rating: " + foodsafe );
+	        curr_restaurant.foodsafe = foodsafe == "No" ? false : true;
 
-		//going into each inspection
-		limitConcurrent(scrapeInspection,[curr_inspect,curr_restaurant]);
+	        $("body p").eq(3).find("tr").slice(1).each(function(index) {
 
-	    });
+		        var curr_inspect = new Inspection();
+		        curr_inspect.type = $(this).find("td").eq(0).find("a").text().trim();
+		        curr_inspect.date = new Date($(this).find("td").eq(1).text().trim());
+		        curr_inspect.url = root_url + $(this).find("td").eq(0).find("a").attr("href").trim();
+		        curr_inspect.violations = [];
+		        //console.log("#### curr inspect: " + curr_inspect);
 
-	    /*
-	    curr_restaurant.save(function(err){
-		if(err){
-		    console.log('################%%%%%%%%%save failed%%%%%%%%%################');
-		} else {
-		    console.log("save successful : " + curr_restaurant);
-		}
-	    });
-*/
+		        //going into each inspection
+		        limitConcurrent(scrapeInspection,[curr_inspect,curr_restaurant]);
+
+	        });
+
+        });
 
 	}
 	
@@ -296,60 +314,56 @@ function scrapeInspection(curr_inspect,curr_restaurant){
 	concurrent--;
     
     Restaurant.findOne({'facility_num': curr_restaurant.facility_num}, function(err, restaurant){
-    
-        //if (err) return handleError(err);
-        
-    
-    });
 
+        if (err) return handleError(err);
+       
+        if (restaurant != null) {
+            console.log("has existing restaurant, replacing it with the one in db, ##################:" + restaurant.name);
+            curr_restaurant = restaurant;
+        }
 
-    curr_restaurant.save(function(err){
-	    if(err){
-	        console.log('################%%%%%%%%%save failed%%%%%%%%%################');
-	    } else {
-	        console.log("save successful for " + curr_restaurant.name);
-	    }
-	});
-
-	request(curr_inspect.url, function(error, response, html) {
-		concurrent++;
-	    
-	    if (!error) {
-
-		var $ = cheerio.load(html);
-
-		curr_inspect.hazard_rating = $(this).find("font").attr('color', '#006600');
-		curr_inspect.num_critical = parseInt($("body p").eq(0).find("tr").eq(3).find("td").eq(1).text());
-		curr_inspect.num_non_critical = parseInt($("body p").eq(0).find("tr").eq(4).find("td").eq(1).text());
-		curr_inspect.comments = $("body p").eq(3).text();
-
-		console.log("inspection: " + curr_inspect.num_critical+" at "+curr_restaurant.name)
-
-		$("body p").eq(2).next().find("tr").slice(1).each(function(index) {
-		    var violation = new Violation();
-
-		    violation.code = $(this).find("td").eq(0).text();
-		    violation.description = $(this).find("td").eq(1).next().text();
-
-		    curr_inspect.violations.push(violation);
-
-		});
-
-		curr_restaurant.inspections.push(curr_inspect);
-
-		//~ console.log("finished restaurant: " + curr_restaurant);
         curr_restaurant.save(function(err){
 	        if(err){
 	            console.log('################%%%%%%%%%save failed%%%%%%%%%################');
 	        } else {
-	            console.log("save successful again for: " + curr_restaurant.name);
+	            console.log("save successful for " + curr_restaurant.name);
 	        }
 	    });
-		//var
 
-	    }
+	    request(curr_inspect.url, function(error, response, html) {
+		    concurrent++;
+	    
+	        if (!error) {
 
-	});
+	    	    var $ = cheerio.load(html);
+
+		        curr_inspect.hazard_rating = $(this).find("font").attr('color', '#006600');
+		        curr_inspect.num_critical = parseInt($("body p").eq(0).find("tr").eq(3).find("td").eq(1).text());
+		        curr_inspect.num_non_critical = parseInt($("body p").eq(0).find("tr").eq(4).find("td").eq(1).text());
+		        curr_inspect.comments = $("body p").eq(3).text();
+
+		        console.log("inspection: " + curr_inspect.num_critical+" at "+curr_restaurant.name)
+
+		        $("body p").eq(2).next().find("tr").slice(1).each(function(index) {
+		            var violation = new Violation();
+		            violation.code = $(this).find("td").eq(0).text();
+		            violation.description = $(this).find("td").eq(1).next().text();
+		            curr_inspect.violations.push(violation);
+
+		        });
+
+		        curr_restaurant.inspections.push(curr_inspect);
+        
+                curr_restaurant.save(function(err){
+	                if(err){
+	                    console.log('################%%%%%%%%%save failed%%%%%%%%%################');
+	                } else {
+	                    console.log("save successful again for: " + curr_restaurant.name);
+	                }
+	            });
+	        }
+	    });
+    });
 }
 
 app.use('/api', router);

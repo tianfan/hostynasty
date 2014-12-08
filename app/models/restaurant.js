@@ -3,7 +3,7 @@ var Schema = mongoose.Schema;
 
 var RestaurantSchema = new Schema({
     name: String,
-    location: { streetAddress: String, latitude: Number, Longitude: Number},
+    location: { streetAddress: String, latitude: Number, longitude: Number},
     city: { name: String, url: String, province: String, health_auth: String},
     number: String,
     type: String,
