@@ -77,7 +77,7 @@ router.route('/restaurants')
            query_for_count = query_for_count.where('city.name').equals(req.query.city);
        }
        if(req.query.name != null) {
-           query = query.where('name').equals('/^' + req.query.name + '$/i');
+           query = query.where('name').equals(req.query.name);
            query_for_count = query_for_count.where('name').equals(req.query.name);
        }
        if(req.query.foodsafe != null) {
@@ -86,13 +86,12 @@ router.route('/restaurants')
                query_for_count = query_for_count.where('foodsafe').equals(true);
            }
        }
-       
-       
-       /*if(res.get.latidude && res.get.longitude) {
+       if(req.query.sw_lat && req.query.sw_lng && req.query.ne_lat && req.query.ne_lng) {
 
-           query = query.where('latitude').gt(res.get.).lt(66)
+           query = query.where('location.latitude').gt(req.query.sw_lat).lt(req.query.ne_lat).where('location.longitude').gt(req.query.sw_lng).lt(req.query.ne_lng);
+           query_for_count = query_for_count.where('location.latitude').gt(req.query.sw_lat).lt(req.query.ne_lat).where('location.longitude').gt(req.query.sw_lng).lt(req.query.ne_lng);
 
-       }*/
+       }
 
        query.exec(function(err, restaurants) {
        
