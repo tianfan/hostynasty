@@ -24,15 +24,6 @@ var Nexturl = "";
 var geocoderProvider = 'google';
 var httpAdapter = 'https';
 
-// optionnal
-var extra = {
-    apiKey: 'AIzaSyCFEBBo8XMieQj8Brkq7V5TWxK3bBBEe2I', // for Mapquest, OpenCage, Google Premier
-    formatter: null         // 'gpx', 'string', ...
-};
-
-var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter, extra);
-
-
 app.use(bodyParser.urlencoded({
     extended: true
 }));
